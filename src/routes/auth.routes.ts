@@ -83,11 +83,11 @@ router.post(
 );
 
 
-// router.get(
-//   "/me",
-//   authenticate,
-//   me
-// );
+router.get(
+  "/me",
+  authenticate,
+  me
+);
 
 
 // router.get(
