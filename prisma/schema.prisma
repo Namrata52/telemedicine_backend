@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ConsultationStatus {
+  BOOKED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+  role     Role
+
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  profile Profile?
+  doctor  Doctor?
+
+  consultationsAsPatient Consultation[]
+
+  auditLogs AuditLog[]
+}
+
+model Profile {
+  id String @id @default(cuid())
+
+  firstName String
+  lastName  String
+
+  phone       String?
+  dateOfBirth DateTime?
+  gender      Gender?
+
+  address String?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Doctor {
+  id String @id @default(cuid())
+
+  specialization  String
+  experience      Int
+  qualification   String
+  consultationFee Float
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  availabilitySlots AvailabilitySlot[]
+
+  consultations Consultation[]
+}
+
+model AvailabilitySlot {
+  id String @id @default(cuid())
+
+  doctorId String
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  startTime DateTime
+  endTime DateTime
+
+  isBooked Boolean @default(false)
+
+  consultation Consultation?
+
+  createdAt DateTime @default(now())
+}
+model Consultation {
+  id String @id @default(cuid())
+
+  patientId String
+  patient User @relation(fields: [patientId], references: [id])
+
+  doctorId String
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  availabilitySlotId String @unique
+  availabilitySlot AvailabilitySlot @relation(fields: [availabilitySlotId], references: [id])
+
+  status ConsultationStatus @default(BOOKED)
+
+  notes String?
+
+  prescription Prescription?
+
+  payment Payment?
+
+  createdAt DateTime @default(now())
+}
+
+model Prescription {
+  id String @id @default(cuid())
+
+  consultationId String       @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+
+  medicines String
+
+  instructions String?
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  consultationId String       @unique
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+
+  amount Float
+
+  status PaymentStatus @default(PENDING)
+
+  transactionId String? @unique
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  action String
+
+  entity String
+
+  entityId String
+
+  createdAt DateTime @default(now())
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+
+  key         String   @unique
+
+  endpoint    String
+
+  requestHash String
+
+  responseId  String?
+
+  createdAt   DateTime @default(now())
+}
